@@ -1,0 +1,217 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jogo da Forca</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #b30000;
+    }
+
+    .palavra {
+      font-size: 28px;
+      letter-spacing: 10px;
+      margin: 20px 0;
+      color: #000;
+    }
+
+    .teclado button {
+      padding: 10px;
+      margin: 3px;
+      font-size: 16px;
+      width: 40px;
+      border: none;
+      background-color: #ddd;
+      cursor: pointer;
+    }
+
+    .teclado button:hover {
+      background-color: #ccc;
+    }
+
+    #forca svg {
+      width: 150px;
+      height: 200px;
+      margin: 20px auto;
+    }
+
+    #mensagem {
+      font-size: 22px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    #dica {
+      font-style: italic;
+      margin: 10px 0;
+      color: #555;
+    }
+
+    button.acao {
+      background-color: #007bff;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    button.acao:hover {
+      background-color: #0056b3;
+    }
+
+    #anuncio {
+      margin: 20px;
+      padding: 10px;
+      border: 2px dashed #888;
+      background-color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Jogo da Forca</h1>
+
+  <div id="anuncio">[ Espaço para Anúncio ]</div>
+
+  <p><strong>Categoria:</strong> <span id="categoria"></span></p>
+  <p><strong>Nível:</strong> <span id="nivel">1</span></p>
+
+  <div id="forca">
+    <svg viewBox="0 0 120 150">
+      <line x1="10" y1="140" x2="110" y2="140" stroke="#000" stroke-width="4"/>
+      <line x1="40" y1="140" x2="40" y2="20" stroke="#000" stroke-width="4"/>
+      <line x1="40" y1="20" x2="90" y2="20" stroke="#000" stroke-width="4"/>
+      <line x1="90" y1="20" x2="90" y2="35" stroke="#000" stroke-width="4"/>
+      <circle id="cabeca" cx="90" cy="45" r="10" stroke="#000" stroke-width="3" fill="none" style="display:none"/>
+      <line id="corpo" x1="90" y1="55" x2="90" y2="90" stroke="#000" stroke-width="3" style="display:none"/>
+      <line id="bracoE" x1="90" y1="65" x2="75" y2="80" stroke="#000" stroke-width="3" style="display:none"/>
+      <line id="bracoD" x1="90" y1="65" x2="105" y2="80" stroke="#000" stroke-width="3" style="display:none"/>
+      <line id="pernaE" x1="90" y1="90" x2="75" y2="110" stroke="#000" stroke-width="3" style="display:none"/>
+      <line id="pernaD" x1="90" y1="90" x2="105" y2="110" stroke="#000" stroke-width="3" style="display:none"/>
+    </svg>
+  </div>
+
+  <div class="palavra" id="palavra"></div>
+  <div id="dica"></div>
+  <div class="teclado" id="teclado"></div>
+
+  <p id="mensagem"></p>
+
+  <button class="acao" onclick="mostrarDica()">Mostrar Dica</button>
+  <button class="acao" onclick="iniciarJogo()">Novo Nível</button>
+
+  <audio id="vitoria" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"></audio>
+  <audio id="derrota" src="https://www.soundjay.com/button/sounds/button-10.mp3"></audio>
+
+  <script>
+    const categorias = {
+      "Frutas": [
+        { palavra: "banana", dica: "Amarela, doce, e macia." },
+        { palavra: "abacaxi", dica: "Tem coroa e espinhos." },
+        { palavra: "laranja", dica: "Fonte de vitamina C." }
+      ],
+      "Animais": [
+        { palavra: "elefante", dica: "O maior mamífero terrestre." },
+        { palavra: "gato", dica: "Mia e gosta de peixe." },
+        { palavra: "cachorro", dica: "Melhor amigo do homem." }
+      ]
+    };
+
+    let palavra = "", dicaAtual = "", letrasCertas = [], erros = 0, maxErros = 6;
+    let nivel = 1;
+
+    function escolherPalavra() {
+      const nomesCategorias = Object.keys(categorias);
+      const categoria = nomesCategorias[Math.floor(Math.random() * nomesCategorias.length)];
+      const lista = categorias[categoria];
+      const escolha = lista[Math.floor(Math.random() * lista.length)];
+
+      palavra = escolha.palavra;
+      dicaAtual = escolha.dica;
+
+      document.getElementById("categoria").innerText = categoria;
+      document.getElementById("nivel").innerText = nivel;
+      document.getElementById("dica").innerText = "";
+    }
+
+    function mostrarPalavra() {
+      const display = palavra.split("").map(l => letrasCertas.includes(l) ? l : "_").join(" ");
+      document.getElementById("palavra").innerText = display;
+    }
+
+    function criarTeclado() {
+      const letras = "abcdefghijklmnopqrstuvwxyz";
+      const teclado = document.getElementById("teclado");
+      teclado.innerHTML = "";
+      letras.split("").forEach(l => {
+        const btn = document.createElement("button");
+        btn.innerText = l;
+        btn.onclick = () => jogarLetra(l);
+        teclado.appendChild(btn);
+      });
+    }
+
+    function jogarLetra(letra) {
+      if (palavra.includes(letra)) {
+        letrasCertas.push(letra);
+      } else {
+        erros++;
+        desenharForca();
+      }
+
+      mostrarPalavra();
+      checarResultado();
+    }
+
+    function desenharForca() {
+      const partes = ["cabeca", "corpo", "bracoE", "bracoD", "pernaE", "pernaD"];
+      if (erros <= partes.length) {
+        document.getElementById(partes[erros - 1]).style.display = "inline";
+      }
+    }
+
+    function checarResultado() {
+      if (palavra.split("").every(l => letrasCertas.includes(l))) {
+        document.getElementById("mensagem").innerText = "Você venceu!";
+        document.getElementById("vitoria").play();
+        desativarTeclado();
+        nivel++;
+      } else if (erros >= maxErros) {
+        document.getElementById("mensagem").innerText = `Você perdeu! Palavra era: ${palavra}`;
+        document.getElementById("derrota").play();
+        desativarTeclado();
+      }
+    }
+
+    function desativarTeclado() {
+      document.querySelectorAll(".teclado button").forEach(btn => btn.disabled = true);
+    }
+
+    function iniciarJogo() {
+      letrasCertas = [];
+      erros = 0;
+      document.getElementById("mensagem").innerText = "";
+      document.getElementById("dica").innerText = "";
+      document.querySelectorAll("svg *").forEach(el => el.style.display = "none");
+      escolherPalavra();
+      mostrarPalavra();
+      criarTeclado();
+    }
+
+    function mostrarDica() {
+      document.getElementById("dica").innerText = "Dica: " + dicaAtual;
+    }
+
+    iniciarJogo();
+  </script>
+</body>
+</html>
